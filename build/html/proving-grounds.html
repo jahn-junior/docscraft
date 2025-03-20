@@ -36,23 +36,55 @@
   <section id="prototype-proving-grounds">
 <span id="proving-grounds"></span><h1>Prototype proving grounds<a class="headerlink" href="#prototype-proving-grounds" title="Link to this heading">¶</a></h1>
 <section id="name">
-<h2>name<a class="headerlink" href="#name" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong><div class="line"><br /></div>
-str</p>
-<p><strong>Description</strong><div class="line"><br /></div>
-The name of this docsraft project.
+<h2><code class="docutils literal notranslate"><span class="pre">name</span></code><a class="headerlink" href="#name" title="Link to this heading">¶</a></h2>
+<p><strong>Type</strong></p>
+<p>str</p>
+<p><strong>Description</strong></p>
+<p>The name of this docsraft project.
 
     This text shows up on the documentation page.
     </p>
-<p><strong>Examples</strong><div class="line"><br /></div>
-[‘snapcraft’, ‘charmcraft’, ‘rockcraft’]</p>
+<p><strong>Examples</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">snapcraft</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">charmcraft</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rockcraft</span>
+</pre></div>
+</div>
+</section>
+<section id="testKey">
+<h2><code class="docutils literal notranslate"><span class="pre">testKey</span></code><a class="headerlink" href="#testKey" title="Link to this heading">¶</a></h2>
+<p><strong>Type</strong></p>
+<p>int</p>
+<p><strong>Description</strong></p>
+<p> is this thing on? </p>
+<p><strong>Examples</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">3</span>
+</pre></div>
+</div>
+</section>
+<section id="build">
+<h2><code class="docutils literal notranslate"><span class="pre">build</span></code><a class="headerlink" href="#build" title="Link to this heading">¶</a></h2>
+<p><strong>Type</strong></p>
+<p>main.DocBuild</p>
+<p><strong>Description</strong></p>
+<p>The build information for this build.</p>
 </section>
 <section id="type">
-<h2>type<a class="headerlink" href="#type" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong><div class="line"><br /></div>
-enum</p>
-<p><strong>Values</strong><div class="line"><br /></div>
-</p>
+<h2><code class="docutils literal notranslate"><span class="pre">type</span></code><a class="headerlink" href="#type" title="Link to this heading">¶</a></h2>
+<p><strong>Type</strong></p>
+<p>enum</p>
+<p><strong>Values</strong></p>
+<div class="table-wrapper docutils container docutils container">
 <table class="docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p>end-user</p></td>
@@ -83,26 +115,18 @@ enum</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Examples</strong><div class="line"><br /></div>
-None</p>
-</section>
-<section id="testKey">
-<h2>testKey<a class="headerlink" href="#testKey" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong><div class="line"><br /></div>
-int</p>
-<p><strong>Description</strong><div class="line"><br /></div>
- is this thing on? </p>
-<p><strong>Examples</strong><div class="line"><br /></div>
-[1, 2, 3]</p>
+</div>
 </section>
 <section id="parts">
-<h2>parts<a class="headerlink" href="#parts" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong><div class="line"><br /></div>
-dict[str, main.Part]</p>
-<p><strong>Description</strong><div class="line"><br /></div>
-Mapping of part names to their information.</p>
-<p><strong>Examples</strong><div class="line"><br /></div>
-[{‘my-part’: {‘plugin: nil’}}]</p>
+<h2><code class="docutils literal notranslate"><span class="pre">parts</span></code><a class="headerlink" href="#parts" title="Link to this heading">¶</a></h2>
+<p><strong>Type</strong></p>
+<p>dict[str, main.Part]</p>
+<p><strong>Description</strong></p>
+<p>Mapping of part names to their information.</p>
+<p><strong>Examples</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;my-part&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;plugin: nil&#39;</span><span class="p">}}</span>
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -135,10 +159,11 @@ Mapping of part names to their information.</p>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Prototype proving grounds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#name">name</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#type">type</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#testKey">testKey</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#parts">parts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#name"><code class="docutils literal notranslate"><span class="pre">name</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testKey"><code class="docutils literal notranslate"><span class="pre">testKey</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build"><code class="docutils literal notranslate"><span class="pre">build</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#type"><code class="docutils literal notranslate"><span class="pre">type</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parts"><code class="docutils literal notranslate"><span class="pre">parts</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="autodoc.html">Autodoc</a></li>

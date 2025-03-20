@@ -44,7 +44,9 @@ class IncludeKeyDirective(SphinxDirective):
 
 def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
   key_node = nodes.section(ids=[key_title])
-  key_node += nodes.title(text=key_title)
+  title_node = nodes.title()
+  title_node += nodes.literal(text=key_title)
+  key_node += title_node
   key_node += create_basic_node('Type', key_type)
   
   if key_desc is not None:
@@ -53,25 +55,36 @@ def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
   if key_values is not None:
     values_header = nodes.paragraph()
     values_header += nodes.strong(text='Values')
-    values_header += nodes.line()
     key_node += values_header
     key_node += create_table_node(key_values)
 
-  key_node += create_basic_node('Examples', key_examples)
+  if key_examples is not None:
+    examples_header = nodes.paragraph()
+    examples_header += nodes.strong(text='Examples')
+    key_node += examples_header
+    for example in key_examples:
+      examples_block = nodes.literal_block()
+      examples_block += nodes.Text(example)
+      key_node += examples_block
 
   return [key_node]
 
 def create_basic_node(heading_str, content):
-  node = nodes.paragraph()
-  node += nodes.strong(text=heading_str)
-  node += nodes.line()
-  node += nodes.Text(content)
+  header_node = nodes.paragraph()
+  header_node += nodes.strong(text=heading_str)
+  content_node = nodes.paragraph()
+  content_node += nodes.Text(content)
 
-  return node
+  return [header_node, content_node]
 
 def create_table_node(values):
   header = ['Values', 'Description']
+
+  div_node = nodes.container()
+  div_node['classes'].append('table-wrapper docutils container')
   table = nodes.table()
+  div_node += table
+
   tgroup = nodes.tgroup(cols=2)
   table += tgroup
 
@@ -87,7 +100,7 @@ def create_table_node(values):
   for row in values:
     tbody += create_table_row(row)
   
-  return table
+  return div_node
 
 def create_table_row(values):
   row = nodes.row()
@@ -119,7 +132,7 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
 
   return docstring
 
-# EVEN MORE GROSS
+# oops i did it again
 def get_enum_member_docstring(cls, enum_member):
   source = inspect.getsource(cls)
   tree = ast.parse(source)
@@ -135,7 +148,7 @@ def get_enum_member_docstring(cls, enum_member):
   
   return None
 
-def get_enum_values(enum_class: str):
+def get_enum_values(enum_class: str) -> list[str]:
   enum_docstrings = []
   
   for attr, enum in enum_class.__dict__.items():
