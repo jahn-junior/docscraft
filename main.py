@@ -72,6 +72,12 @@ class Docscraft(pydantic.BaseModel):
     This text shows up on the documentation page.
     """
 
+    testKey: int = pydantic.Field(
+      description="json description",
+      examples=[1, 2, 3]
+    )
+    """ is this thing on? """
+
     type: DocType
 
     build: DocBuild

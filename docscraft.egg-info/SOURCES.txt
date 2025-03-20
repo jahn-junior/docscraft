@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+docscraft.egg-info/PKG-INFO
+docscraft.egg-info/SOURCES.txt
+docscraft.egg-info/dependency_links.txt
+docscraft.egg-info/requires.txt
+docscraft.egg-info/top_level.txt
+source/conf.py
+source/_ext/prototype.py

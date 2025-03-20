@@ -1,5 +1,28 @@
 {
   "$defs": {
+    "DocBuild": {
+      "description": "A single documentation build option.",
+      "properties": {
+        "path": {
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "build_command": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Build Command",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "build_command"
+      ],
+      "title": "DocBuild",
+      "type": "object"
+    },
     "DocType": {
       "description": "The type of documentation in this project.",
       "enum": [
@@ -9,6 +32,24 @@
       ],
       "title": "DocType",
       "type": "string"
+    },
+    "Part": {
+      "properties": {
+        "plugin": {
+          "title": "Plugin",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin",
+        "source"
+      ],
+      "title": "Part",
+      "type": "object"
     }
   },
   "description": "docscraft.yaml\n\nThis file describes how Docscraft will build your documentation.\nWe have to be careful with this docstring because it gets used in the schema but\ncould also be used in the docs themselves.",
@@ -24,13 +65,44 @@
       "title": "Project name",
       "type": "string"
     },
+    "testKey": {
+      "description": "json description",
+      "examples": [
+        1,
+        2,
+        3
+      ],
+      "title": "Testkey",
+      "type": "integer"
+    },
     "type": {
       "$ref": "#/$defs/DocType"
+    },
+    "build": {
+      "$ref": "#/$defs/DocBuild"
+    },
+    "parts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Part"
+      },
+      "description": "Mapping of part names to their information.",
+      "examples": [
+        {
+          "my-part": [
+            "plugin: nil"
+          ]
+        }
+      ],
+      "title": "Parts",
+      "type": "object"
     }
   },
   "required": [
     "name",
-    "type"
+    "testKey",
+    "type",
+    "build",
+    "parts"
   ],
   "title": "Docscraft",
   "type": "object"

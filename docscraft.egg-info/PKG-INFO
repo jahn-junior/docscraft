@@ -1,0 +1,11 @@
+Metadata-Version: 2.2
+Name: docscraft
+Version: 0.1.0
+Summary: A braindump of pydantic models for us to document
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic>=2.10.6
+Requires-Dist: sphinx
+Requires-Dist: sphinx-autobuild>=2024.10.3
+
+God help us all

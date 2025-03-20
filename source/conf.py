@@ -6,6 +6,13 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path('_ext').resolve()))
+sys.path.insert(0, os.path.abspath("../"))
+
 project = 'Docscraft'
 copyright = '2025, Me'
 author = 'Me'
@@ -16,6 +23,7 @@ release = 'no'
 
 extensions = [
     "sphinx.ext.autodoc",
+    "prototype",
 ]
 
 templates_path = ['_templates']
@@ -27,4 +35,3 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-html_static_path = ['_static']
