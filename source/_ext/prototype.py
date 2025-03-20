@@ -25,20 +25,22 @@ class IncludeKeyDirective(SphinxDirective):
     if not self.arguments[1] in pydantic_class.__annotations__:
       return [] # this should throw an error in final product
 
+    # grab pydantic field data (need desc and examples)
     field_params = pydantic_class.__fields__[self.arguments[1]]
 
     # grab type and enum data if applicable
     if issubclass(field_params.annotation, enum.Enum):
+      description_str = field_params.annotation.__doc__
       enum_values = get_enum_values(field_params.annotation)
       basic_type = 'enum'
     else:
+      description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
       enum_values = None
       basic_type = format_type_string(f'{field_params.annotation}')
 
     # grab docstring for type annotation from the class AST
-    description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
     if description_str is None:
-      description_str = field_params.description
+      description_str = field_params.description # use JSON description value
 
     return create_key_node(self.arguments[1], basic_type, description_str, enum_values, field_params.examples)
 
@@ -78,8 +80,6 @@ def create_basic_node(heading_str, content):
   return [header_node, content_node]
 
 def create_table_node(values):
-  header = ['Values', 'Description']
-
   div_node = nodes.container()
   div_node['classes'].append('table-wrapper docutils container')
   table = nodes.table()
@@ -92,7 +92,18 @@ def create_table_node(values):
   tgroup += nodes.colspec(colwidth=1)
 
   thead = nodes.thead()
-  thead += create_table_row(header)
+  header_row = nodes.row()
+
+  values_entry = nodes.entry()
+  values_entry += nodes.Text('Values')
+  header_row += values_entry
+
+  desc_entry = nodes.entry()
+  desc_entry += nodes.Text('Description')
+  header_row += desc_entry
+
+  thead += header_row
+  tgroup += thead
 
   tbody = nodes.tbody()
   tgroup += tbody
@@ -104,7 +115,10 @@ def create_table_node(values):
 
 def create_table_row(values):
   row = nodes.row()
-  for cell in values:
+  entry = nodes.entry()
+  row += entry
+  entry += nodes.literal(text=values[0])
+  for cell in values[1:]:
       entry = nodes.entry()
       row += entry
       entry += nodes.paragraph(text=cell)
