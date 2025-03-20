@@ -25,43 +25,41 @@ class IncludeKeyDirective(SphinxDirective):
     if not self.arguments[1] in pydantic_class.__annotations__:
       return [] # this should throw an error in final product
 
-    key_node = nodes.section(ids=[self.arguments[1]])
-
-    title = nodes.title()
-    title += nodes.Text(self.arguments[1])
-    key_node += title
-
     field_params = pydantic_class.__fields__[self.arguments[1]]
 
     # grab type and enum data if applicable
     if issubclass(field_params.annotation, enum.Enum):
-      enum_values = get_values_node(field_params.annotation)
+      enum_values = get_enum_values(field_params.annotation)
       basic_type = 'enum'
     else:
       enum_values = None
       basic_type = format_type_string(f'{field_params.annotation}')
-
-    key_node += create_basic_node('Type', basic_type)
 
     # grab docstring for type annotation from the class AST
     description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
     if description_str is None:
       description_str = field_params.description
 
-    if description_str is not None:
-      key_node += create_basic_node('Description', description_str)
+    return create_key_node(self.arguments[1], basic_type, description_str, enum_values, field_params.examples)
 
-    if enum_values is not None:
-      values_header = nodes.paragraph()
-      values_header += nodes.strong(text='Values')
-      values_header += nodes.line()
-      key_node += values_header
-      key_node += create_table(enum_values)
+def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
+  key_node = nodes.section(ids=[key_title])
+  key_node += nodes.title(text=key_title)
+  key_node += create_basic_node('Type', key_type)
+  
+  if key_desc is not None:
+    key_node += create_basic_node('Description', key_desc)
+  
+  if key_values is not None:
+    values_header = nodes.paragraph()
+    values_header += nodes.strong(text='Values')
+    values_header += nodes.line()
+    key_node += values_header
+    key_node += create_table_node(key_values)
 
-    if field_params.examples is not None:
-      key_node += create_basic_node('Examples', field_params.examples)
+  key_node += create_basic_node('Examples', key_examples)
 
-    return [key_node]
+  return [key_node]
 
 def create_basic_node(heading_str, content):
   node = nodes.paragraph()
@@ -71,7 +69,7 @@ def create_basic_node(heading_str, content):
 
   return node
 
-def create_table(values):
+def create_table_node(values):
   header = ['Values', 'Description']
   table = nodes.table()
   tgroup = nodes.tgroup(cols=2)
@@ -103,7 +101,7 @@ def create_table_row(values):
 def get_annotation_docstring(cls, annotation_name: str) -> str:
   code = inspect.getsource(cls)
   tree = ast.parse(code)
-
+  
   found = False
   docstring = None
 
@@ -121,12 +119,28 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
 
   return docstring
 
-def get_values_node(enum_class: str):
-  enum_docstrings = []
+# EVEN MORE GROSS
+def get_enum_member_docstring(cls, enum_member):
+  source = inspect.getsource(cls)
+  tree = ast.parse(source)
 
+  for node in tree.body:
+    for i, inner_node in enumerate(node.body):
+      if isinstance(inner_node, ast.Assign):
+        for target in inner_node.targets:
+          if isinstance(target, ast.Name) and target.id == enum_member:
+            docstring_node = node.body[i + 1]
+            if isinstance(docstring_node, ast.Expr):
+              return docstring_node.value.value
+  
+  return None
+
+def get_enum_values(enum_class: str):
+  enum_docstrings = []
+  
   for attr, enum in enum_class.__dict__.items():
     if not attr.startswith('_'):
-      docstring = enum.__doc__
+      docstring = get_enum_member_docstring(enum_class, attr)
       if docstring:
         enum_docstrings.append([f'{enum.value}', f'{docstring}'])
 
