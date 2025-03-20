@@ -1,4 +1,5 @@
 from docutils import nodes
+from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive
 
 from sphinx.application import Sphinx
@@ -11,6 +12,7 @@ import enum
 import importlib
 import inspect
 import pydantic
+import textwrap
 
 
 class IncludeKeyDirective(SphinxDirective):
@@ -52,7 +54,10 @@ def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
   key_node += create_basic_node('Type', key_type)
   
   if key_desc is not None:
-    key_node += create_basic_node('Description', key_desc)
+    desc_header = nodes.paragraph()
+    desc_header += nodes.strong(text='Description')
+    key_node += desc_header
+    key_node += parse_rst_description(key_desc)
   
   if key_values is not None:
     values_header = nodes.paragraph()
@@ -115,13 +120,15 @@ def create_table_node(values):
 
 def create_table_row(values):
   row = nodes.row()
-  entry = nodes.entry()
-  row += entry
-  entry += nodes.literal(text=values[0])
-  for cell in values[1:]:
-      entry = nodes.entry()
-      row += entry
-      entry += nodes.paragraph(text=cell)
+
+  value_entry = nodes.entry()
+  value_entry += nodes.literal(text=values[0])
+  row += value_entry
+
+  desc_entry = nodes.entry()
+  desc_entry += parse_rst_description(values[1])
+  row += desc_entry
+
   return row
 
 # This is kinda gross
@@ -172,6 +179,21 @@ def get_enum_values(enum_class: str) -> list[str]:
         enum_docstrings.append([f'{enum.value}', f'{docstring}'])
 
   return enum_docstrings
+
+def parse_rst_description(rst_desc):
+  desc_nodes = []
+  rst_doc = publish_doctree(strip_whitespace(rst_desc))
+  for node in rst_doc.children:
+    desc_nodes.append(node)
+
+  return desc_nodes
+
+def strip_whitespace(rst_desc):
+  lines = rst_desc.splitlines()
+  first_line = lines[0]
+  remaining_lines = lines[1:]
+  dedented_remaining_lines = textwrap.dedent("\n".join(remaining_lines)).splitlines()
+  return "\n".join([first_line] + dedented_remaining_lines)
 
 def format_type_string(type_str: str) -> str:
   start = type_str.find("'") + 1
