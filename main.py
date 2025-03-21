@@ -86,7 +86,7 @@ class Docscraft(pydantic.BaseModel):
     parts: dict[str, Part] = pydantic.Field(
         description="Mapping of part names to their information.",
         examples=[
-            {"my-part": {"plugin: nil"}},
+            {"my-part": {"plugin": "nil"}},
         ]
     )
 

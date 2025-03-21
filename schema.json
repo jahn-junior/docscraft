@@ -88,9 +88,9 @@
       "description": "Mapping of part names to their information.",
       "examples": [
         {
-          "my-part": [
-            "plugin: nil"
-          ]
+          "my-part": {
+            "plugin": "nil"
+          }
         }
       ],
       "title": "Parts",

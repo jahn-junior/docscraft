@@ -17,11 +17,6 @@ Prototype proving grounds
 
 .. include-model:: main.Docscraft
 
-    This is a custom description
+    This is a custom description. If you don't add this to the directive,
+    it will grab the pydantic model's docstring.
 
-    Can it contain rst? Let's find out
-
-    .. code-block:: yaml
-      :caption: yes it can
-
-      test: passed

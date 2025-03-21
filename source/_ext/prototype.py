@@ -11,6 +11,7 @@ import ast
 import enum
 import importlib
 import inspect
+import json
 import pydantic
 import textwrap
 
@@ -95,35 +96,44 @@ class IncludeModelDirective(SphinxDirective):
     return [class_node]
 
 
-def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
-  key_node = nodes.section(ids=[key_title])
+def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
+  key_node = nodes.section(ids=[key_name])
   title_node = nodes.title()
-  title_node += nodes.literal(text=key_title)
+  title_node += nodes.literal(text=key_name)
   key_node += title_node
-  key_node += create_basic_node('Type', key_type)
+  key_node += create_basic_node('Type', key_name)
   
-  if key_desc is not None:
+  if key_desc:
     desc_header = nodes.paragraph()
     desc_header += nodes.strong(text='Description')
     key_node += desc_header
     key_node += parse_rst_description(key_desc)
   
-  if key_values is not None:
+  if key_values:
     values_header = nodes.paragraph()
     values_header += nodes.strong(text='Values')
     key_node += values_header
     key_node += create_table_node(key_values)
 
-  if key_examples is not None:
+  if key_examples:
     examples_header = nodes.paragraph()
     examples_header += nodes.strong(text='Examples')
     key_node += examples_header
     for example in key_examples:
-      examples_block = nodes.literal_block()
-      examples_block += nodes.Text(example)
-      key_node += examples_block
+      key_node += build_examples_block(key_name, example)
 
   return key_node
+
+
+def build_examples_block(key_name, example):
+  examples_block = nodes.literal_block()
+  example_str = json.dumps(example, indent=2)
+  examples_block += nodes.Text(f'{key_name}: ')
+  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
+  examples_block += nodes.Text(yaml_string)
+
+  return examples_block
+  
 
 
 def create_basic_node(heading_str, content):
@@ -183,7 +193,7 @@ def create_table_row(values):
   return row
 
 
-# This is kinda gross
+# this is kinda gross
 def get_annotation_docstring(cls, annotation_name: str) -> str:
   code = inspect.getsource(cls)
   tree = ast.parse(code)
@@ -206,7 +216,7 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
   return docstring
 
 
-# oops i did it again
+# also kinda gross
 def get_enum_member_docstring(cls, enum_member):
   source = inspect.getsource(cls)
   tree = ast.parse(source)
