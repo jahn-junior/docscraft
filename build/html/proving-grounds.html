@@ -35,8 +35,10 @@
             
   <section id="prototype-proving-grounds">
 <span id="proving-grounds"></span><h1>Prototype proving grounds<a class="headerlink" href="#prototype-proving-grounds" title="Link to this heading">¶</a></h1>
+<section id="include-key-output">
+<h2><code class="docutils literal notranslate"><span class="pre">include-key</span></code> output<a class="headerlink" href="#include-key-output" title="Link to this heading">¶</a></h2>
 <section id="name">
-<h2><code class="docutils literal notranslate"><span class="pre">name</span></code><a class="headerlink" href="#name" title="Link to this heading">¶</a></h2>
+<h3><code class="docutils literal notranslate"><span class="pre">name</span></code><a class="headerlink" href="#name" title="Link to this heading">¶</a></h3>
 <p><strong>Type</strong></p>
 <p>str</p>
 <p><strong>Description</strong></p>
@@ -53,38 +55,14 @@
 </pre></div>
 </div>
 </section>
-<section id="testKey">
-<h2><code class="docutils literal notranslate"><span class="pre">testKey</span></code><a class="headerlink" href="#testKey" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong></p>
-<p>int</p>
-<p><strong>Description</strong></p>
-<p>is this thing on?</p>
-<p><strong>Examples</strong></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
-</pre></div>
-</div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2</span>
-</pre></div>
-</div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">3</span>
-</pre></div>
-</div>
-</section>
-<section id="build">
-<h2><code class="docutils literal notranslate"><span class="pre">build</span></code><a class="headerlink" href="#build" title="Link to this heading">¶</a></h2>
-<p><strong>Type</strong></p>
-<p>main.DocBuild</p>
-<p><strong>Description</strong></p>
-<p>The build information for this build.</p>
-</section>
 <section id="type">
-<h2><code class="docutils literal notranslate"><span class="pre">type</span></code><a class="headerlink" href="#type" title="Link to this heading">¶</a></h2>
+<h3><code class="docutils literal notranslate"><span class="pre">type</span></code><a class="headerlink" href="#type" title="Link to this heading">¶</a></h3>
 <p><strong>Type</strong></p>
 <p>enum</p>
 <p><strong>Description</strong></p>
 <p>The type of documentation in this project.</p>
 <p><strong>Values</strong></p>
-<div class="table-wrapper docutils container docutils container">
+<div class="docutils container">
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head">Values</th>
@@ -120,8 +98,105 @@ a style guide, etc. Examples include:</p>
 </table>
 </div>
 </section>
+</section>
+<section id="include-model-output">
+<h2><code class="docutils literal notranslate"><span class="pre">include-model</span></code> output<a class="headerlink" href="#include-model-output" title="Link to this heading">¶</a></h2>
+<section id="Docscraft">
+<p>This is a custom description</p>
+<p>Can it contain rst? Let’s find out</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">yes it can</span><a class="headerlink" href="#id1" title="Link to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">passed</span>
+</pre></div>
+</div>
+</div>
+<section id="name">
+<h4><code class="docutils literal notranslate"><span class="pre">name</span></code><a class="headerlink" href="#name" title="Link to this heading">¶</a></h4>
+<p><strong>Type</strong></p>
+<p>str</p>
+<p><strong>Description</strong></p>
+<p>The name of this docsraft project.</p>
+<p>This text shows up on the documentation page.</p>
+<p><strong>Examples</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">snapcraft</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">charmcraft</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rockcraft</span>
+</pre></div>
+</div>
+</section>
+<section id="testKey">
+<h4><code class="docutils literal notranslate"><span class="pre">testKey</span></code><a class="headerlink" href="#testKey" title="Link to this heading">¶</a></h4>
+<p><strong>Type</strong></p>
+<p>int</p>
+<p><strong>Description</strong></p>
+<p>is this thing on?</p>
+<p><strong>Examples</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">3</span>
+</pre></div>
+</div>
+</section>
+<section id="type">
+<h4><code class="docutils literal notranslate"><span class="pre">type</span></code><a class="headerlink" href="#type" title="Link to this heading">¶</a></h4>
+<p><strong>Type</strong></p>
+<p>enum</p>
+<p><strong>Description</strong></p>
+<p>The type of documentation in this project.</p>
+<p><strong>Values</strong></p>
+<div class="docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head">Values</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">end-user</span></code></td>
+<td><p>End user documentation.</p>
+<p>This is documentation for people who are using the product. For example, the end
+user of snapcraft’s documentation is someone who’s building or maintaining a snap.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">developer</span></code></td>
+<td><p>Developer documentation.</p>
+<p>This is documentation for someone who wants to contribute to the product’s source
+code. It will often contain things like how to set up your development environment
+and linting rules.</p>
+</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">documenter</span></code></td>
+<td><p>Documenter documentation.</p>
+<p>This is documentation aimed at someone who wants to work on the documentation for
+a product. It should contain things like how to set up a documentation environment,
+a style guide, etc. Examples include:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.ubuntu.com/styleguide/en/">The Ubuntu style guide</a></p></li>
+<li><p><a class="reference external" href="https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/">https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/</a></p></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="build">
+<h4><code class="docutils literal notranslate"><span class="pre">build</span></code><a class="headerlink" href="#build" title="Link to this heading">¶</a></h4>
+<p><strong>Type</strong></p>
+<p>main.DocBuild</p>
+<p><strong>Description</strong></p>
+<p>The build information for this build.</p>
+</section>
 <section id="parts">
-<h2><code class="docutils literal notranslate"><span class="pre">parts</span></code><a class="headerlink" href="#parts" title="Link to this heading">¶</a></h2>
+<h4><code class="docutils literal notranslate"><span class="pre">parts</span></code><a class="headerlink" href="#parts" title="Link to this heading">¶</a></h4>
 <p><strong>Type</strong></p>
 <p>dict[str, main.Part]</p>
 <p><strong>Description</strong></p>
@@ -130,6 +205,8 @@ a style guide, etc. Examples include:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;my-part&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;plugin: nil&#39;</span><span class="p">}}</span>
 </pre></div>
 </div>
+</section>
+</section>
 </section>
 </section>
 
@@ -162,11 +239,8 @@ a style guide, etc. Examples include:</p>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Prototype proving grounds</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#name"><code class="docutils literal notranslate"><span class="pre">name</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#testKey"><code class="docutils literal notranslate"><span class="pre">testKey</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#build"><code class="docutils literal notranslate"><span class="pre">build</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#type"><code class="docutils literal notranslate"><span class="pre">type</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#parts"><code class="docutils literal notranslate"><span class="pre">parts</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#include-key-output"><code class="docutils literal notranslate"><span class="pre">include-key</span></code> output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#include-model-output"><code class="docutils literal notranslate"><span class="pre">include-model</span></code> output</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="autodoc.html">Autodoc</a></li>

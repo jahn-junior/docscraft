@@ -17,6 +17,9 @@ import textwrap
 
 class IncludeKeyDirective(SphinxDirective):
   required_arguments = 2
+  optional_arguments = 0
+  has_content = False
+  final_argument_whitespace = True
 
   def run(self) -> list[nodes.Node]:
     module_str, class_str = self.arguments[0].rsplit('.', maxsplit=1)
@@ -44,7 +47,53 @@ class IncludeKeyDirective(SphinxDirective):
     if description_str is None:
       description_str = field_params.description # use JSON description value
 
-    return create_key_node(self.arguments[1], basic_type, description_str, enum_values, field_params.examples)
+    return [create_key_node(self.arguments[1], basic_type, description_str, enum_values, field_params.examples)]
+
+
+class IncludeModelDirective(SphinxDirective):
+  required_arguments = 1
+  optional_arguments = 0
+  has_content = True
+  final_argument_whitespace = True
+
+  def run(self) -> list[nodes.Node]:
+    module_str, class_str = self.arguments[0].rsplit('.', maxsplit=1)
+    module = importlib.import_module(module_str)
+    pydantic_class = getattr(module, class_str)
+
+    if not issubclass(pydantic_class, pydantic.BaseModel):
+      return []
+
+    class_node = nodes.section(ids=[pydantic_class.__name__])
+    
+    if self.content:
+      class_node += parse_rst_description('\n'.join(self.content))
+    else:
+      class_node += parse_rst_description(pydantic_class.__doc__)
+
+    for field in pydantic_class.__annotations__:
+      if not field.startswith('_') and not field.startswith('model_'):
+        # grab pydantic field data (need desc and examples)
+        field_params = pydantic_class.__fields__[field]
+
+        # grab type and enum data if applicable
+        if issubclass(field_params.annotation, enum.Enum):
+          description_str = field_params.annotation.__doc__
+          enum_values = get_enum_values(field_params.annotation)
+          basic_type = 'enum'
+        else:
+          description_str = get_annotation_docstring(pydantic_class, field)
+          enum_values = None
+          basic_type = format_type_string(f'{field_params.annotation}')
+
+        # grab docstring for type annotation from the class AST
+        if description_str is None:
+          description_str = field_params.description # use JSON description value
+        
+        class_node.append(create_key_node(field, basic_type, description_str, enum_values, field_params.examples))
+
+    return [class_node]
+
 
 def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
   key_node = nodes.section(ids=[key_title])
@@ -74,7 +123,8 @@ def create_key_node(key_title, key_type, key_desc, key_values, key_examples):
       examples_block += nodes.Text(example)
       key_node += examples_block
 
-  return [key_node]
+  return key_node
+
 
 def create_basic_node(heading_str, content):
   header_node = nodes.paragraph()
@@ -84,9 +134,9 @@ def create_basic_node(heading_str, content):
 
   return [header_node, content_node]
 
+
 def create_table_node(values):
   div_node = nodes.container()
-  div_node['classes'].append('table-wrapper docutils container')
   table = nodes.table()
   div_node += table
 
@@ -118,6 +168,7 @@ def create_table_node(values):
   
   return div_node
 
+
 def create_table_row(values):
   row = nodes.row()
 
@@ -130,6 +181,7 @@ def create_table_row(values):
   row += desc_entry
 
   return row
+
 
 # This is kinda gross
 def get_annotation_docstring(cls, annotation_name: str) -> str:
@@ -153,6 +205,7 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
 
   return docstring
 
+
 # oops i did it again
 def get_enum_member_docstring(cls, enum_member):
   source = inspect.getsource(cls)
@@ -169,6 +222,7 @@ def get_enum_member_docstring(cls, enum_member):
   
   return None
 
+
 def get_enum_values(enum_class: str) -> list[str]:
   enum_docstrings = []
   
@@ -180,6 +234,7 @@ def get_enum_values(enum_class: str) -> list[str]:
 
   return enum_docstrings
 
+
 def parse_rst_description(rst_desc):
   desc_nodes = []
   rst_doc = publish_doctree(strip_whitespace(rst_desc))
@@ -188,12 +243,14 @@ def parse_rst_description(rst_desc):
 
   return desc_nodes
 
+
 def strip_whitespace(rst_desc):
   lines = rst_desc.splitlines()
   first_line = lines[0]
   remaining_lines = lines[1:]
   dedented_remaining_lines = textwrap.dedent("\n".join(remaining_lines)).splitlines()
   return "\n".join([first_line] + dedented_remaining_lines)
+
 
 def format_type_string(type_str: str) -> str:
   start = type_str.find("'") + 1
@@ -204,8 +261,10 @@ def format_type_string(type_str: str) -> str:
 
   return type_str[start:end]
 
+
 def setup(app: Sphinx) -> ExtensionMetadata:
   app.add_directive('include-key', IncludeKeyDirective)
+  app.add_directive('include-model', IncludeModelDirective)
 
   return {
     'version': '0.1',

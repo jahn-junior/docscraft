@@ -3,12 +3,25 @@
 Prototype proving grounds
 =========================
 
+
+``include-key`` output
+----------------------
+
 .. include-key:: main.Docscraft name
-
-.. include-key:: main.Docscraft testKey
-
-.. include-key:: main.Docscraft build
 
 .. include-key:: main.Docscraft type
 
-.. include-key:: main.Docscraft parts
+
+``include-model`` output
+------------------------
+
+.. include-model:: main.Docscraft
+
+    This is a custom description
+
+    Can it contain rst? Let's find out
+
+    .. code-block:: yaml
+      :caption: yes it can
+
+      test: passed
