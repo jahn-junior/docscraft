@@ -101,7 +101,7 @@ def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
   title_node = nodes.title()
   title_node += nodes.literal(text=key_name)
   key_node += title_node
-  key_node += create_basic_node('Type', key_name)
+  key_node += create_basic_node('Type', key_type)
   
   if key_desc:
     desc_header = nodes.paragraph()
