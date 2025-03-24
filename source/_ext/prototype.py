@@ -7,7 +7,7 @@ from sphinx.locale import _
 from sphinx.util.docutils import SphinxDirective
 from sphinx.util.typing import ExtensionMetadata
 
-from typing import Union, _UnionGenericAlias, get_args, get_origin
+from typing import Union, _UnionGenericAlias, get_args, get_origin, get_type_hints
 
 import ast
 import enum
@@ -38,12 +38,19 @@ class IncludeKeyDirective(SphinxDirective):
     field_params = pydantic_class.__fields__[self.arguments[1]]
 
     description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
+    examples = field_params.examples
     enum_values = None
     basic_type = None
 
     if isinstance(field_params.annotation, types.UnionType):
       basic_type = format_type_string(str(field_params.annotation.__args__[0]))
     elif isinstance(field_params.annotation, _UnionGenericAlias):
+      if len(field_params.annotation.__args__[0].__metadata__) == 1:
+        description_str = field_params.annotation.__args__[0].__metadata__[0].description
+        examples = field_params.annotation.__args__[0].__metadata__[0].examples
+      else:
+        description_str = field_params.annotation.__args__[0].__metadata__[1].description
+        examples = field_params.annotation.__args__[0].__metadata__[1].examples
       basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
     elif isinstance(field_params.annotation, type):
       if issubclass(field_params.annotation, enum.Enum):
@@ -52,10 +59,10 @@ class IncludeKeyDirective(SphinxDirective):
       else:
         basic_type = format_type_string(str(field_params.annotation))
 
-    if description_str is None:
+    if description_str is None: # if no docstring
       description_str = field_params.description # use JSON description value
 
-    return [create_key_node(self.arguments[1], basic_type, description_str, enum_values, field_params.examples)]
+    return [create_key_node(self.arguments[1], basic_type, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
@@ -79,17 +86,24 @@ class IncludeModelDirective(SphinxDirective):
 
     for field in pydantic_class.__annotations__:
       if not field.startswith('_') and not field.startswith('model_'):
+        
         # grab pydantic field data (need desc and examples)
         field_params = pydantic_class.__fields__[field]
 
         description_str = get_annotation_docstring(pydantic_class, field)
-
+        examples = field_params.examples
         enum_values = None
         basic_type = None
 
         if isinstance(field_params.annotation, types.UnionType):
           basic_type = format_type_string(str(field_params.annotation.__args__[0]))
         elif isinstance(field_params.annotation, _UnionGenericAlias):
+          if len(field_params.annotation.__args__[0].__metadata__) == 1:
+            description_str = field_params.annotation.__args__[0].__metadata__[0].description
+            examples = field_params.annotation.__args__[0].__metadata__[0].examples
+          else:
+            description_str = field_params.annotation.__args__[0].__metadata__[1].description
+            examples = field_params.annotation.__args__[0].__metadata__[1].examples
           basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
         elif isinstance(field_params.annotation, type):
           if issubclass(field_params.annotation, enum.Enum):
@@ -98,10 +112,10 @@ class IncludeModelDirective(SphinxDirective):
           else:
             basic_type = format_type_string(str(field_params.annotation))
 
-        if description_str is None:
+        if description_str is None: # if no docstring
           description_str = field_params.description # use JSON description value
         
-        class_nodes.append(create_key_node(field, basic_type, description_str, enum_values, field_params.examples))
+        class_nodes.append(create_key_node(field, basic_type, description_str, enum_values, examples))
 
     return class_nodes
 
@@ -210,8 +224,7 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
 
   for node in ast.walk(tree):
     if isinstance(node, ast.AnnAssign):
-      # ensures it doesn't skip to the next type annotation
-      # in the absence of a docstring
+
       if found:
         return None
       if node.target.id == annotation_name:
