@@ -98,12 +98,14 @@ class IncludeModelDirective(SphinxDirective):
         if isinstance(field_params.annotation, types.UnionType):
           basic_type = format_type_string(str(field_params.annotation.__args__[0]))
         elif isinstance(field_params.annotation, _UnionGenericAlias):
-          if len(field_params.annotation.__args__[0].__metadata__) == 1:
-            description_str = field_params.annotation.__args__[0].__metadata__[0].description
-            examples = field_params.annotation.__args__[0].__metadata__[0].examples
-          else:
-            description_str = field_params.annotation.__args__[0].__metadata__[1].description
-            examples = field_params.annotation.__args__[0].__metadata__[1].examples
+          metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
+          if metadata:
+            if len(metadata) == 1:
+              description_str = metadata[0].description
+              examples = metadata[0].examples
+            else:
+              description_str = metadata[1].description
+              examples = metadata[1].examples
           basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
         elif isinstance(field_params.annotation, type):
           if issubclass(field_params.annotation, enum.Enum):
