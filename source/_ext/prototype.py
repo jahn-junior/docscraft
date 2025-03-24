@@ -71,13 +71,11 @@ class IncludeModelDirective(SphinxDirective):
 
     if not issubclass(pydantic_class, pydantic.BaseModel):
       return []
-
-    class_node = nodes.section(ids=[pydantic_class.__name__])
     
     if self.content:
-      class_node += parse_rst_description('\n'.join(self.content))
+      class_nodes = parse_rst_description('\n'.join(self.content))
     else:
-      class_node += parse_rst_description(pydantic_class.__doc__)
+      class_nodes = parse_rst_description(pydantic_class.__doc__)
 
     for field in pydantic_class.__annotations__:
       if not field.startswith('_') and not field.startswith('model_'):
@@ -103,9 +101,9 @@ class IncludeModelDirective(SphinxDirective):
         if description_str is None:
           description_str = field_params.description # use JSON description value
         
-        class_node.append(create_key_node(field, basic_type, description_str, enum_values, field_params.examples))
+        class_nodes.append(create_key_node(field, basic_type, description_str, enum_values, field_params.examples))
 
-    return [class_node]
+    return class_nodes
 
 
 def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
