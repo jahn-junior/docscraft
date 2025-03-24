@@ -7,6 +7,8 @@ from sphinx.locale import _
 from sphinx.util.docutils import SphinxDirective
 from sphinx.util.typing import ExtensionMetadata
 
+from typing import Union, _UnionGenericAlias, get_args, get_origin
+
 import ast
 import enum
 import importlib
@@ -14,6 +16,7 @@ import inspect
 import json
 import pydantic
 import textwrap
+import types
 
 
 class IncludeKeyDirective(SphinxDirective):
@@ -34,17 +37,21 @@ class IncludeKeyDirective(SphinxDirective):
     # grab pydantic field data (need desc and examples)
     field_params = pydantic_class.__fields__[self.arguments[1]]
 
-    # grab type and enum data if applicable
-    if issubclass(field_params.annotation, enum.Enum):
-      description_str = field_params.annotation.__doc__
-      enum_values = get_enum_values(field_params.annotation)
-      basic_type = 'enum'
-    else:
-      description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
-      enum_values = None
-      basic_type = format_type_string(f'{field_params.annotation}')
+    description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
+    enum_values = None
+    basic_type = None
 
-    # grab docstring for type annotation from the class AST
+    if isinstance(field_params.annotation, types.UnionType):
+      basic_type = format_type_string(str(field_params.annotation.__args__[0]))
+    elif isinstance(field_params.annotation, _UnionGenericAlias):
+      basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
+    elif isinstance(field_params.annotation, type):
+      if issubclass(field_params.annotation, enum.Enum):
+        description_str = field_params.annotation.__doc__
+        enum_values = get_enum_values(field_params.annotation)
+      else:
+        basic_type = format_type_string(str(field_params.annotation))
+
     if description_str is None:
       description_str = field_params.description # use JSON description value
 
@@ -77,17 +84,22 @@ class IncludeModelDirective(SphinxDirective):
         # grab pydantic field data (need desc and examples)
         field_params = pydantic_class.__fields__[field]
 
-        # grab type and enum data if applicable
-        if issubclass(field_params.annotation, enum.Enum):
-          description_str = field_params.annotation.__doc__
-          enum_values = get_enum_values(field_params.annotation)
-          basic_type = 'enum'
-        else:
-          description_str = get_annotation_docstring(pydantic_class, field)
-          enum_values = None
-          basic_type = format_type_string(f'{field_params.annotation}')
+        description_str = get_annotation_docstring(pydantic_class, field)
 
-        # grab docstring for type annotation from the class AST
+        enum_values = None
+        basic_type = None
+
+        if isinstance(field_params.annotation, types.UnionType):
+          basic_type = format_type_string(str(field_params.annotation.__args__[0]))
+        elif isinstance(field_params.annotation, _UnionGenericAlias):
+          basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
+        elif isinstance(field_params.annotation, type):
+          if issubclass(field_params.annotation, enum.Enum):
+            description_str = field_params.annotation.__doc__
+            enum_values = get_enum_values(field_params.annotation)
+          else:
+            basic_type = format_type_string(str(field_params.annotation))
+
         if description_str is None:
           description_str = field_params.description # use JSON description value
         
@@ -101,7 +113,14 @@ def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
   title_node = nodes.title()
   title_node += nodes.literal(text=key_name)
   key_node += title_node
-  key_node += create_basic_node('Type', key_type)
+  
+  if key_type:
+    type_header = nodes.paragraph()
+    type_header += nodes.strong(text='Type')
+    type_value = nodes.paragraph()
+    type_value += nodes.Text(key_type)
+    key_node += type_header
+    key_node += type_value
   
   if key_desc:
     desc_header = nodes.paragraph()
@@ -128,21 +147,11 @@ def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
 def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
   example_str = json.dumps(example, indent=2)
-  examples_block += nodes.Text(f'{key_name}: ')
+  # examples_block += nodes.Text(f'{key_name}: ')
   yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
   examples_block += nodes.Text(yaml_string)
 
   return examples_block
-  
-
-
-def create_basic_node(heading_str, content):
-  header_node = nodes.paragraph()
-  header_node += nodes.strong(text=heading_str)
-  content_node = nodes.paragraph()
-  content_node += nodes.Text(content)
-
-  return [header_node, content_node]
 
 
 def create_table_node(values):
