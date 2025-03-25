@@ -42,24 +42,26 @@ class IncludeKeyDirective(SphinxDirective):
     enum_values = None
     basic_type = None
 
-        if isinstance(field_params.annotation, types.UnionType):
-          basic_type = format_type_string(str(field_params.annotation.__args__[0]))
-        elif isinstance(field_params.annotation, _UnionGenericAlias):
-          metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
-          if metadata:
-            if len(metadata) == 1:
-              description_str = metadata[0].description
-              examples = metadata[0].examples
-            else:
-              description_str = metadata[1].description
-              examples = metadata[1].examples
-          basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
-        elif isinstance(field_params.annotation, type):
-          if issubclass(field_params.annotation, enum.Enum):
-            description_str = field_params.annotation.__doc__
-            enum_values = get_enum_values(field_params.annotation)
-          else:
-            basic_type = format_type_string(str(field_params.annotation))
+    if isinstance(field_params.annotation, types.UnionType):
+      basic_type = format_type_string(str(field_params.annotation.__args__[0]))
+    elif isinstance(field_params.annotation, _UnionGenericAlias):
+      metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
+      if metadata:
+        basic_type = format_type_string(str(field_params.annotation.__args__[0].__args__[0]))
+        if len(metadata) == 1:
+          description_str = metadata[0].description
+          examples = metadata[0].examples
+        else:
+          description_str = metadata[1].description
+          examples = metadata[1].examples
+      else:
+        basic_type = format_type_string(str(field_params.annotation.__args__[0]))
+    elif isinstance(field_params.annotation, type):
+      if issubclass(field_params.annotation, enum.Enum):
+        description_str = field_params.annotation.__doc__
+        enum_values = get_enum_values(field_params.annotation)
+      else:
+        basic_type = format_type_string(str(field_params.annotation))
 
     if description_str is None: # if no docstring
       description_str = field_params.description # use JSON description value
@@ -102,13 +104,15 @@ class IncludeModelDirective(SphinxDirective):
         elif isinstance(field_params.annotation, _UnionGenericAlias):
           metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
           if metadata:
+            basic_type = format_type_string(str(field_params.annotation.__args__[0].__args__[0]))
             if len(metadata) == 1:
               description_str = metadata[0].description
               examples = metadata[0].examples
             else:
               description_str = metadata[1].description
               examples = metadata[1].examples
-          basic_type = format_type_string(str(field_params.annotation.__args__[0].__origin__))
+          else:
+            basic_type = format_type_string(str(field_params.annotation.__args__[0]))
         elif isinstance(field_params.annotation, type):
           if issubclass(field_params.annotation, enum.Enum):
             description_str = field_params.annotation.__doc__
