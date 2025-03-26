@@ -7,7 +7,7 @@ from sphinx.locale import _
 from sphinx.util.docutils import SphinxDirective
 from sphinx.util.typing import ExtensionMetadata
 
-from typing import Union, _UnionGenericAlias, get_args, get_origin, get_type_hints
+from pydantic.fields import FieldInfo
 
 import ast
 import enum
@@ -17,6 +17,7 @@ import json
 import pydantic
 import textwrap
 import types
+import typing
 
 
 class IncludeKeyDirective(SphinxDirective):
@@ -38,33 +39,34 @@ class IncludeKeyDirective(SphinxDirective):
     field_params = pydantic_class.__fields__[self.arguments[1]]
 
     description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
-    examples = field_params.examples
-    enum_values = None
-    basic_type = None
-
-    if isinstance(field_params.annotation, types.UnionType):
-      basic_type = format_type_string(str(field_params.annotation.__args__[0]))
-    elif isinstance(field_params.annotation, _UnionGenericAlias):
-      metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
-      if metadata:
-        basic_type = format_type_string(str(field_params.annotation.__args__[0].__args__[0]))
-        if len(metadata) == 1:
-          description_str = metadata[0].description
-          examples = metadata[0].examples
-        else:
-          description_str = metadata[1].description
-          examples = metadata[1].examples
-      else:
-        basic_type = format_type_string(str(field_params.annotation.__args__[0]))
-    elif isinstance(field_params.annotation, type):
-      if issubclass(field_params.annotation, enum.Enum):
-        description_str = field_params.annotation.__doc__
-        enum_values = get_enum_values(field_params.annotation)
-      else:
-        basic_type = format_type_string(str(field_params.annotation))
-
     if description_str is None: # if no docstring
       description_str = field_params.description # use JSON description value
+    
+    examples = field_params.examples
+
+    if isinstance(field_params.annotation, types.UnionType):
+      union_args = typing.get_args(field_params.annotation)
+      basic_type = format_type_string(str(union_args[0]))
+    else:
+      basic_type = format_type_string(str(field_params.annotation))
+
+    enum_values = None
+    
+    # if field is of the form `field: type1 | type2`
+    if typing.get_origin(field_params.annotation) is typing.Union:
+      annotated_type = field_params.annotation.__args__[0]
+      basic_type = format_type_string(str(annotated_type.__args__[0]))
+      metadata = getattr(annotated_type, '__metadata__', None)
+      field_annotation = find_field_data(metadata)
+      if field_annotation:
+        if description_str is None and examples is None:
+          description_str = field_annotation.description
+          examples = field_annotation.examples
+    elif isinstance(field_params.annotation, type):
+      if issubclass(field_params.annotation, enum.Enum):
+        if description_str is None:
+          description_str = field_params.annotation.__doc__
+        enum_values = get_enum_values(field_params.annotation)
 
     return [create_key_node(self.arguments[1], basic_type, description_str, enum_values, examples)]
 
@@ -95,37 +97,48 @@ class IncludeModelDirective(SphinxDirective):
         field_params = pydantic_class.__fields__[field]
 
         description_str = get_annotation_docstring(pydantic_class, field)
-        examples = field_params.examples
-        enum_values = None
-        basic_type = None
-
-        if isinstance(field_params.annotation, types.UnionType):
-          basic_type = format_type_string(str(field_params.annotation.__args__[0]))
-        elif isinstance(field_params.annotation, _UnionGenericAlias):
-          metadata = getattr(field_params.annotation.__args__[0], '__metadata__', None)
-          if metadata:
-            basic_type = format_type_string(str(field_params.annotation.__args__[0].__args__[0]))
-            if len(metadata) == 1:
-              description_str = metadata[0].description
-              examples = metadata[0].examples
-            else:
-              description_str = metadata[1].description
-              examples = metadata[1].examples
-          else:
-            basic_type = format_type_string(str(field_params.annotation.__args__[0]))
-        elif isinstance(field_params.annotation, type):
-          if issubclass(field_params.annotation, enum.Enum):
-            description_str = field_params.annotation.__doc__
-            enum_values = get_enum_values(field_params.annotation)
-          else:
-            basic_type = format_type_string(str(field_params.annotation))
-
         if description_str is None: # if no docstring
           description_str = field_params.description # use JSON description value
+        
+        examples = field_params.examples
+
+        if isinstance(field_params.annotation, types.UnionType):
+          union_args = typing.get_args(field_params.annotation)
+          basic_type = format_type_string(str(union_args[0]))
+        else:
+          basic_type = format_type_string(str(field_params.annotation))
+        
+        enum_values = None
+        
+        # if field is of the form `field: type1 | type2`
+        if typing.get_origin(field_params.annotation) is typing.Union:
+          annotated_type = field_params.annotation.__args__[0]
+          basic_type = format_type_string(str(annotated_type.__args__[0]))
+          metadata = getattr(annotated_type, '__metadata__', None)
+          field_annotation = find_field_data(metadata)
+          if field_annotation:
+            if description_str is None and examples is None:
+              description_str = field_annotation.description
+              examples = field_annotation.examples
+        elif isinstance(field_params.annotation, type):
+          if issubclass(field_params.annotation, enum.Enum):
+            if description_str is None:
+              description_str = field_params.annotation.__doc__
+            enum_values = get_enum_values(field_params.annotation)
         
         class_nodes.append(create_key_node(field, basic_type, description_str, enum_values, examples))
 
     return class_nodes
+
+def find_field_data(metadata):
+
+  if metadata:
+    for element in metadata:
+      if isinstance(element, FieldInfo):
+        return element
+
+  return None
+
 
 
 def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
@@ -168,7 +181,7 @@ def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
   example_str = json.dumps(example, indent=2)
   # examples_block += nodes.Text(f'{key_name}: ')
-  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
+  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').lstrip().rstrip()
   examples_block += nodes.Text(yaml_string)
 
   return examples_block
