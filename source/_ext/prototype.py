@@ -15,6 +15,7 @@ import importlib
 import inspect
 import json
 import pydantic
+import re
 import textwrap
 import types
 import typing
@@ -358,6 +359,13 @@ def strip_whitespace(rst_desc):
 
 
 def format_type_string(type_str: str) -> str:
+  pattern = r'Literal\[(.*?)\]'
+
+  if re.search(pattern, type_str):
+    string_list = re.search(pattern,type_str).group(1)
+    list_items = re.findall(r"'([^']*)'", string_list)
+    return f'Any of: {list_items}'
+
   start = type_str.find("'") + 1
   end = type_str.rfind("'")
 
