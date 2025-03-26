@@ -74,7 +74,8 @@ class Docscraft(pydantic.BaseModel):
 
     testKey: int = pydantic.Field(
       description="json description",
-      examples=[1, 2, 3]
+      examples=[1, 2, 3],
+      deprecated="this is deprecated and will be removed soon"
     )
     """is this thing on?"""
 

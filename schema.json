@@ -66,6 +66,7 @@
       "type": "string"
     },
     "testKey": {
+      "deprecated": true,
       "description": "json description",
       "examples": [
         1,

@@ -28,6 +28,7 @@ class IncludeKeyDirective(SphinxDirective):
 
   option_spec = {
     'hide-examples': bool,
+    'hide-type': bool,
     'name-prepend': str,
     'name-append': str
   }
@@ -54,16 +55,16 @@ class IncludeKeyDirective(SphinxDirective):
 
     if isinstance(field_params.annotation, types.UnionType):
       union_args = typing.get_args(field_params.annotation)
-      basic_type = format_type_string(str(union_args[0]))
+      field_type = format_type_string(str(union_args[0]))
     else:
-      basic_type = format_type_string(str(field_params.annotation))
+      field_type = format_type_string(str(field_params.annotation))
 
     enum_values = None
     
     # if field is of the form `field: type1 | type2`
     if typing.get_origin(field_params.annotation) is typing.Union:
       annotated_type = field_params.annotation.__args__[0]
-      basic_type = format_type_string(str(annotated_type.__args__[0]))
+      field_type = format_type_string(str(annotated_type.__args__[0]))
       metadata = getattr(annotated_type, '__metadata__', None)
       field_annotation = find_field_data(metadata)
       if field_annotation:
@@ -76,18 +77,30 @@ class IncludeKeyDirective(SphinxDirective):
           description_str = field_params.annotation.__doc__
         enum_values = get_enum_values(field_params.annotation)
 
+    deprecation_warning = is_deprecated(pydantic_class, key_name)
+
+    if deprecation_warning:
+      description_str = f'{deprecation_warning}\n\n{description_str}'
+
+    # Remove type if :hide-type: directive option was used
+    if 'hide-type' in self.options:
+      field_type = None
+
+    # Remove examples if :hide-examples: directive option was used
     if 'hide-examples' in self.options:
       examples = None
 
-    name_prepend = self.options.get('name-prepend', '')
-    name_append = self.options.get('name-append', '')
+    # Get strings to concatenate with `key_name`
+    name_prefix = self.options.get('name-prepend', '')
+    name_suffix = self.options.get('name-append', '')
 
-    if name_prepend:
-      key_name = f'{name_prepend}.{key_name}'
-    if name_append:
-      key_name = f'{key_name}.{name_append}'
+    # Concatenate option values in the form <prefix>.key_name.<suffix>
+    if name_prefix:
+      key_name = f'{name_prefix}.{key_name}'
+    if name_suffix:
+      key_name = f'{key_name}.{name_suffix}'
 
-    return [create_key_node(key_name, basic_type, description_str, enum_values, examples)]
+    return [create_key_node(key_name, field_type, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
@@ -95,6 +108,10 @@ class IncludeModelDirective(SphinxDirective):
   optional_arguments = 0
   has_content = True
   final_argument_whitespace = True
+
+  option_spec = {
+    'deprecated': str
+  }
 
   def run(self) -> list[nodes.Node]:
     module_str, class_str = self.arguments[0].rsplit('.', maxsplit=1)
@@ -104,13 +121,23 @@ class IncludeModelDirective(SphinxDirective):
     if not issubclass(pydantic_class, pydantic.BaseModel):
       return []
     
+    # User-provided description overrides model docstring
     if self.content:
       class_nodes = parse_rst_description('\n'.join(self.content))
     else:
       class_nodes = parse_rst_description(pydantic_class.__doc__)
 
+    # Check if user provided a list of deprecated fields to include
+    deprecated_option = self.options.get('deprecated', '')
+    include_deprecated = [field.strip() for field in deprecated_option.split(',')]
+
     for field in pydantic_class.__annotations__:
-      if not field.startswith('_') and not field.startswith('model_'):
+      is_auto_generated = field.startswith('_') or field.startswith('model_')
+      
+      if not is_auto_generated:
+        deprecation_warning = is_deprecated(pydantic_class, field)
+      
+      if not is_auto_generated and deprecation_warning is None or field in include_deprecated:
         
         # grab pydantic field data (need desc and examples)
         field_params = pydantic_class.__fields__[field]
@@ -123,16 +150,16 @@ class IncludeModelDirective(SphinxDirective):
 
         if isinstance(field_params.annotation, types.UnionType):
           union_args = typing.get_args(field_params.annotation)
-          basic_type = format_type_string(str(union_args[0]))
+          field_type = format_type_string(str(union_args[0]))
         else:
-          basic_type = format_type_string(str(field_params.annotation))
+          field_type = format_type_string(str(field_params.annotation))
         
         enum_values = None
         
         # if field is of the form `field: type1 | type2`
         if typing.get_origin(field_params.annotation) is typing.Union:
           annotated_type = field_params.annotation.__args__[0]
-          basic_type = format_type_string(str(annotated_type.__args__[0]))
+          field_type = format_type_string(str(annotated_type.__args__[0]))
           metadata = getattr(annotated_type, '__metadata__', None)
           field_annotation = find_field_data(metadata)
           if field_annotation:
@@ -145,12 +172,15 @@ class IncludeModelDirective(SphinxDirective):
               description_str = field_params.annotation.__doc__
             enum_values = get_enum_values(field_params.annotation)
         
-        class_nodes.append(create_key_node(field, basic_type, description_str, enum_values, examples))
+        if deprecation_warning:
+          description_str = f'{deprecation_warning}\n\n{description_str}'
+
+        class_nodes.append(create_key_node(field, field_type, description_str, enum_values, examples))
 
     return class_nodes
 
-def find_field_data(metadata):
 
+def find_field_data(metadata):
   if metadata:
     for element in metadata:
       if isinstance(element, FieldInfo):
@@ -158,6 +188,11 @@ def find_field_data(metadata):
 
   return None
 
+
+def is_deprecated(model, field):
+  field_params = model.__fields__[field]
+  warning = getattr(field_params, 'deprecated', None)
+  return warning
 
 
 def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
@@ -199,8 +234,8 @@ def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
 def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
   example_str = json.dumps(example, indent=2)
-  # examples_block += nodes.Text(f'{key_name}: ')
-  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').lstrip().rstrip()
+  examples_block += nodes.Text(f'{key_name}: ')
+  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').strip()
   examples_block += nodes.Text(yaml_string)
 
   return examples_block
