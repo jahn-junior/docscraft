@@ -8,6 +8,9 @@ Prototype proving grounds
 ----------------------
 
 .. include-key:: main.Docscraft name
+    :hide-examples:
+    :name-prepend: <before>
+    :name-append: <after>
 
 .. include-key:: main.Docscraft type
 

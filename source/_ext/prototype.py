@@ -26,6 +26,12 @@ class IncludeKeyDirective(SphinxDirective):
   has_content = False
   final_argument_whitespace = True
 
+  option_spec = {
+    'hide-examples': bool,
+    'name-prepend': str,
+    'name-append': str
+  }
+
   def run(self) -> list[nodes.Node]:
     module_str, class_str = self.arguments[0].rsplit('.', maxsplit=1)
     module = importlib.import_module(module_str)
@@ -35,10 +41,12 @@ class IncludeKeyDirective(SphinxDirective):
     if not self.arguments[1] in pydantic_class.__annotations__:
       return [] # this should throw an error in final product
 
-    # grab pydantic field data (need desc and examples)
-    field_params = pydantic_class.__fields__[self.arguments[1]]
+    key_name = self.arguments[1]
 
-    description_str = get_annotation_docstring(pydantic_class, self.arguments[1])
+    # grab pydantic field data (need desc and examples)
+    field_params = pydantic_class.__fields__[key_name]
+
+    description_str = get_annotation_docstring(pydantic_class, key_name)
     if description_str is None: # if no docstring
       description_str = field_params.description # use JSON description value
     
@@ -68,7 +76,18 @@ class IncludeKeyDirective(SphinxDirective):
           description_str = field_params.annotation.__doc__
         enum_values = get_enum_values(field_params.annotation)
 
-    return [create_key_node(self.arguments[1], basic_type, description_str, enum_values, examples)]
+    if 'hide-examples' in self.options:
+      examples = None
+
+    name_prepend = self.options.get('name-prepend', '')
+    name_append = self.options.get('name-append', '')
+
+    if name_prepend:
+      key_name = f'{name_prepend}.{key_name}'
+    if name_append:
+      key_name = f'{key_name}.{name_append}'
+
+    return [create_key_node(key_name, basic_type, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
