@@ -236,7 +236,7 @@ def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
   example_str = json.dumps(example, indent=2)
   examples_block += nodes.Text(f'{key_name}: ')
-  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').strip()
+  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
   examples_block += nodes.Text(yaml_string)
 
   return examples_block
@@ -354,8 +354,8 @@ def strip_whitespace(rst_desc):
   lines = rst_desc.splitlines()
   first_line = lines[0]
   remaining_lines = lines[1:]
-  dedented_remaining_lines = textwrap.dedent("\n".join(remaining_lines)).splitlines()
-  return "\n".join([first_line] + dedented_remaining_lines)
+  dedented_remaining_lines = textwrap.dedent('\n'.join(remaining_lines)).splitlines()
+  return '\n'.join([first_line] + dedented_remaining_lines)
 
 
 def format_type_string(type_str: str) -> str:
