@@ -21,7 +21,7 @@ import types
 import typing
 
 
-class IncludeKeyDirective(SphinxDirective):
+class IncludeFieldDirective(SphinxDirective):
   required_arguments = 2
   optional_arguments = 0
   has_content = False
@@ -98,7 +98,7 @@ class IncludeKeyDirective(SphinxDirective):
     if name_suffix:
       key_name = f'{key_name}.{name_suffix}'
 
-    return [create_key_node(key_name, field_type, deprecation_warning, description_str, enum_values, examples)]
+    return [create_key_node(key_name, deprecation_warning, field_type, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
@@ -182,7 +182,7 @@ class IncludeModelDirective(SphinxDirective):
         if name_suffix:
           key_name = f'{key_name}.{name_suffix}'
 
-        class_nodes.append(create_key_node(field, field_type, deprecation_warning, description_str, enum_values, examples))
+        class_nodes.append(create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples))
 
     return class_nodes
 
@@ -209,19 +209,11 @@ def is_deprecated(model, field):
   return warning
 
 
-def create_key_node(key_name, key_type, deprecated_message, key_desc, key_values, key_examples):
+def create_key_node(key_name, deprecated_message, key_type, key_desc, key_values, key_examples):
   key_node = nodes.section(ids=[key_name])
   title_node = nodes.title()
   title_node += nodes.literal(text=key_name)
   key_node += title_node
-  
-  if key_type:
-    type_header = nodes.paragraph()
-    type_header += nodes.strong(text='Type')
-    type_value = nodes.paragraph()
-    type_value += nodes.Text(key_type)
-    key_node += type_header
-    key_node += type_value
   
   if deprecated_message:
     deprecated_node = nodes.admonition()
@@ -229,6 +221,14 @@ def create_key_node(key_name, key_type, deprecated_message, key_desc, key_values
     deprecated_node += nodes.title(text='Important')
     deprecated_node += parse_rst_description(deprecated_message)
     key_node += deprecated_node
+
+  if key_type:
+    type_header = nodes.paragraph()
+    type_header += nodes.strong(text='Type')
+    type_value = nodes.paragraph()
+    type_value += nodes.Text(key_type)
+    key_node += type_header
+    key_node += type_value
 
   if key_desc:
     desc_header = nodes.paragraph()
@@ -363,19 +363,18 @@ def get_enum_values(enum_class: str) -> list[str]:
 
 def parse_rst_description(rst_desc):
   desc_nodes = []
-  rst_doc = publish_doctree(strip_whitespace(rst_desc))
-  for node in rst_doc.children:
-    desc_nodes.append(node)
-
-  return desc_nodes
-
-
-def strip_whitespace(rst_desc):
+  
   lines = rst_desc.splitlines()
   first_line = lines[0]
   remaining_lines = lines[1:]
   dedented_remaining_lines = textwrap.dedent('\n'.join(remaining_lines)).splitlines()
-  return '\n'.join([first_line] + dedented_remaining_lines)
+  formatted_desc = '\n'.join([first_line] + dedented_remaining_lines)
+
+  rst_doc = publish_doctree(formatted_desc)
+  for node in rst_doc.children:
+    desc_nodes.append(node)
+
+  return desc_nodes
 
 
 def format_type_string(type_str: str) -> str:
@@ -389,6 +388,7 @@ def format_type_string(type_str: str) -> str:
   start = type_str.find("'") + 1
   end = type_str.rfind("'")
 
+  # band-aid
   if end == -1:
     return type_str
 
@@ -396,7 +396,7 @@ def format_type_string(type_str: str) -> str:
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
-  app.add_directive('include-key', IncludeKeyDirective)
+  app.add_directive('include-field', IncludeFieldDirective)
   app.add_directive('include-model', IncludeModelDirective)
 
   return {

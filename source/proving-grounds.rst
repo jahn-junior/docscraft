@@ -4,16 +4,16 @@ Prototype proving grounds
 =========================
 
 
-``include-key`` output
-----------------------
+``include-field`` output
+------------------------
 
-.. include-key:: main.Docscraft name
+.. include-field:: main.Docscraft name
     :hide-examples:
     :hide-type:
     :name-prepend: <before>
     :name-append: <after>
 
-.. include-key:: main.Docscraft testKey
+.. include-field:: main.Docscraft testKey
 
 
 ``include-model`` output
