@@ -31,7 +31,7 @@ class IncludeKeyDirective(SphinxDirective):
     'hide-examples': bool,
     'hide-type': bool,
     'name-prepend': str,
-    'name-append': str
+    'name-append': str,
   }
 
   def run(self) -> list[nodes.Node]:
@@ -80,9 +80,6 @@ class IncludeKeyDirective(SphinxDirective):
 
     deprecation_warning = is_deprecated(pydantic_class, key_name)
 
-    if deprecation_warning:
-      description_str = f'{deprecation_warning}\n\n{description_str}'
-
     # Remove type if :hide-type: directive option was used
     if 'hide-type' in self.options:
       field_type = None
@@ -101,7 +98,7 @@ class IncludeKeyDirective(SphinxDirective):
     if name_suffix:
       key_name = f'{key_name}.{name_suffix}'
 
-    return [create_key_node(key_name, field_type, description_str, enum_values, examples)]
+    return [create_key_node(key_name, field_type, deprecation_warning, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
@@ -111,7 +108,9 @@ class IncludeModelDirective(SphinxDirective):
   final_argument_whitespace = True
 
   option_spec = {
-    'deprecated': str
+    'deprecated': str,
+    'name-prepend': str,
+    'name-append': str,
   }
 
   def run(self) -> list[nodes.Node]:
@@ -172,11 +171,18 @@ class IncludeModelDirective(SphinxDirective):
             if description_str is None:
               description_str = field_params.annotation.__doc__
             enum_values = get_enum_values(field_params.annotation)
-        
-        if deprecation_warning:
-          description_str = f'{deprecation_warning}\n\n{description_str}'
 
-        class_nodes.append(create_key_node(field, field_type, description_str, enum_values, examples))
+        # Get strings to concatenate with `key_name`
+        name_prefix = self.options.get('name-prepend', '')
+        name_suffix = self.options.get('name-append', '')
+
+        # Concatenate option values in the form <prefix>.key_name.<suffix>
+        if name_prefix:
+          key_name = f'{name_prefix}.{key_name}'
+        if name_suffix:
+          key_name = f'{key_name}.{name_suffix}'
+
+        class_nodes.append(create_key_node(field, field_type, deprecation_warning, description_str, enum_values, examples))
 
     return class_nodes
 
@@ -193,10 +199,17 @@ def find_field_data(metadata):
 def is_deprecated(model, field):
   field_params = model.__fields__[field]
   warning = getattr(field_params, 'deprecated', None)
+
+  if warning:
+    if isinstance(warning, str):
+      warning = f'Deprecated. {warning}'
+    else:
+      warning = f'This key is deprecated.'
+
   return warning
 
 
-def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
+def create_key_node(key_name, key_type, deprecated_message, key_desc, key_values, key_examples):
   key_node = nodes.section(ids=[key_name])
   title_node = nodes.title()
   title_node += nodes.literal(text=key_name)
@@ -210,6 +223,13 @@ def create_key_node(key_name, key_type, key_desc, key_values, key_examples):
     key_node += type_header
     key_node += type_value
   
+  if deprecated_message:
+    deprecated_node = nodes.admonition()
+    deprecated_node['classes'] = ['important']
+    deprecated_node += nodes.title(text='Important')
+    deprecated_node += parse_rst_description(deprecated_message)
+    key_node += deprecated_node
+
   if key_desc:
     desc_header = nodes.paragraph()
     desc_header += nodes.strong(text='Description')
