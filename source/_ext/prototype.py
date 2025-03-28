@@ -23,7 +23,6 @@ import typing
 
 class IncludeFieldDirective(SphinxDirective):
   required_arguments = 2
-  optional_arguments = 0
   has_content = False
   final_argument_whitespace = True
 
@@ -45,7 +44,7 @@ class IncludeFieldDirective(SphinxDirective):
 
     key_name = self.arguments[1]
 
-    # grab pydantic field data (need desc and examples)
+    # grab pydantic field data
     field_params = pydantic_class.__fields__[key_name]
 
     description_str = get_annotation_docstring(pydantic_class, key_name)
@@ -65,7 +64,9 @@ class IncludeFieldDirective(SphinxDirective):
     # if field is of the form `field: type1 | type2`
     if typing.get_origin(field_params.annotation) is typing.Union:
       annotated_type = field_params.annotation.__args__[0]
-      field_type = format_type_string(str(annotated_type.__args__[0]))
+      # weird case: optional listeral list fields
+      if not isinstance(annotated_type, typing._LiteralGenericAlias):
+        field_type = format_type_string(str(annotated_type.__args__[0]))
       metadata = getattr(annotated_type, '__metadata__', None)
       field_annotation = find_field_data(metadata)
       if field_annotation:
@@ -103,7 +104,6 @@ class IncludeFieldDirective(SphinxDirective):
 
 class IncludeModelDirective(SphinxDirective):
   required_arguments = 1
-  optional_arguments = 0
   has_content = True
   final_argument_whitespace = True
 
@@ -138,7 +138,6 @@ class IncludeModelDirective(SphinxDirective):
         deprecation_warning = is_deprecated(pydantic_class, field)
       
       if not is_auto_generated and deprecation_warning is None or field in include_deprecated:
-        
         # grab pydantic field data (need desc and examples)
         field_params = pydantic_class.__fields__[field]
 
@@ -182,7 +181,7 @@ class IncludeModelDirective(SphinxDirective):
         if name_suffix:
           key_name = f'{key_name}.{name_suffix}'
 
-        class_nodes.append(create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples))
+        class_nodes += create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples)
 
     return class_nodes
 
@@ -320,7 +319,6 @@ def get_annotation_docstring(cls, annotation_name: str) -> str:
 
   for node in ast.walk(tree):
     if isinstance(node, ast.AnnAssign):
-
       if found:
         return None
       if node.target.id == annotation_name:
@@ -343,7 +341,7 @@ def get_enum_member_docstring(cls, enum_member):
         for target in inner_node.targets:
           if isinstance(target, ast.Name) and target.id == enum_member:
             docstring_node = node.body[i + 1]
-            if isinstance(docstring_node, ast.Expr):
+            if isinstance(node.body[i + 1], ast.Expr):
               return docstring_node.value.value
   
   return None
@@ -378,6 +376,7 @@ def parse_rst_description(rst_desc):
 
 
 def format_type_string(type_str: str) -> str:
+  print(f'\n{type_str}\n')
   pattern = r'Literal\[(.*?)\]'
 
   if re.search(pattern, type_str):
