@@ -110,6 +110,7 @@ class IncludeModelDirective(SphinxDirective):
   final_argument_whitespace = True
 
   option_spec = {
+    'section-title': str,
     'deprecated': str,
     'name-prepend': str,
     'name-append': str,
@@ -123,11 +124,15 @@ class IncludeModelDirective(SphinxDirective):
     if not issubclass(pydantic_class, pydantic.BaseModel):
       return []
     
+    class_node = nodes.section(ids=[class_str])
+    title_node = nodes.title(text=self.options.get('section-title', ''))
+    class_node += title_node
+
     # User-provided description overrides model docstring
     if self.content:
-      class_nodes = parse_rst_description('\n'.join(self.content))
+      class_node += parse_rst_description('\n'.join(self.content))
     else:
-      class_nodes = parse_rst_description(pydantic_class.__doc__)
+      class_node += parse_rst_description(pydantic_class.__doc__)
 
     # Check if user provided a list of deprecated fields to include
     deprecated_option = self.options.get('deprecated', '')
@@ -188,9 +193,9 @@ class IncludeModelDirective(SphinxDirective):
         if name_suffix:
           field = f'{key_name}.{field}'
 
-        class_nodes += create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples)
+        class_node += create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples)
 
-    return class_nodes
+    return [class_node]
 
 
 def find_field_data(metadata):
