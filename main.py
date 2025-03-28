@@ -77,7 +77,15 @@ class Docscraft(pydantic.BaseModel):
       examples=[1, 2, 3],
       deprecated="this is deprecated and will be removed soon"
     )
-    """is this thing on?"""
+    """is this thing on?
+    
+    **Examples**
+
+    .. code-block:: yaml
+
+        test: passed
+
+    """
 
     type: DocType
 

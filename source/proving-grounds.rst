@@ -14,6 +14,7 @@ Prototype proving grounds
     :name-append: <after>
 
 .. include-field:: main.Docscraft testKey
+    :hide-examples:
 
 
 ``include-model`` output

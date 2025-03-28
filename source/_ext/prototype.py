@@ -52,16 +52,18 @@ class IncludeFieldDirective(SphinxDirective):
       description_str = field_params.description # use JSON description value
     
     examples = field_params.examples
+    enum_values = None
 
     if isinstance(field_params.annotation, types.UnionType):
       union_args = typing.get_args(field_params.annotation)
       field_type = format_type_string(str(union_args[0]))
+      if issubclass(union_args[0], enum.Enum):
+        if description_str is None:
+          description_str = union_args[0].__doc__
+        enum_values = get_enum_values(union_args[0])
     else:
       field_type = format_type_string(str(field_params.annotation))
-
-    enum_values = None
     
-    # if field is of the form `field: type1 | type2`
     if typing.get_origin(field_params.annotation) is typing.Union:
       annotated_type = field_params.annotation.__args__[0]
       # weird case: optional listeral list fields
@@ -146,19 +148,24 @@ class IncludeModelDirective(SphinxDirective):
           description_str = field_params.description # use JSON description value
         
         examples = field_params.examples
+        enum_values = None
 
         if isinstance(field_params.annotation, types.UnionType):
           union_args = typing.get_args(field_params.annotation)
           field_type = format_type_string(str(union_args[0]))
+          if issubclass(union_args[0], enum.Enum):
+            if description_str is None:
+              description_str = union_args[0].__doc__
+            enum_values = get_enum_values(union_args[0])
         else:
           field_type = format_type_string(str(field_params.annotation))
         
-        enum_values = None
-        
-        # if field is of the form `field: type1 | type2`
+        # if field is of the form `field: type1 | type2 = pydantic.Field(...)`
         if typing.get_origin(field_params.annotation) is typing.Union:
           annotated_type = field_params.annotation.__args__[0]
-          field_type = format_type_string(str(annotated_type.__args__[0]))
+          # weird case: optional listeral list fields
+          if not isinstance(annotated_type, typing._LiteralGenericAlias):
+            field_type = format_type_string(str(annotated_type.__args__[0]))
           metadata = getattr(annotated_type, '__metadata__', None)
           field_annotation = find_field_data(metadata)
           if field_annotation:
@@ -177,9 +184,9 @@ class IncludeModelDirective(SphinxDirective):
 
         # Concatenate option values in the form <prefix>.key_name.<suffix>
         if name_prefix:
-          key_name = f'{name_prefix}.{key_name}'
+          field = f'{name_prefix}.{field}'
         if name_suffix:
-          key_name = f'{key_name}.{name_suffix}'
+          field = f'{key_name}.{field}'
 
         class_nodes += create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples)
 
@@ -254,7 +261,7 @@ def create_key_node(key_name, deprecated_message, key_type, key_desc, key_values
 def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
   example_str = json.dumps(example, indent=2)
-  examples_block += nodes.Text(f'{key_name}: ')
+  examples_block += nodes.Text(f'{key_name.rsplit('.', maxsplit=1)[-1]}: ')
   yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
   examples_block += nodes.Text(yaml_string)
 
@@ -361,22 +368,25 @@ def get_enum_values(enum_class: str) -> list[str]:
 
 def parse_rst_description(rst_desc):
   desc_nodes = []
-  
-  lines = rst_desc.splitlines()
-  first_line = lines[0]
-  remaining_lines = lines[1:]
-  dedented_remaining_lines = textwrap.dedent('\n'.join(remaining_lines)).splitlines()
-  formatted_desc = '\n'.join([first_line] + dedented_remaining_lines)
-
-  rst_doc = publish_doctree(formatted_desc)
+  rst_doc = publish_doctree(strip_whitespace(rst_desc))
   for node in rst_doc.children:
     desc_nodes.append(node)
 
   return desc_nodes
 
 
+def strip_whitespace(rst_desc):
+  if rst_desc:
+    lines = rst_desc.splitlines()
+    first_line = lines[0]
+    remaining_lines = lines[1:]
+    dedented_remaining_lines = textwrap.dedent('\n'.join(remaining_lines)).splitlines()
+    return '\n'.join([first_line] + dedented_remaining_lines)
+  
+  return ''
+
+
 def format_type_string(type_str: str) -> str:
-  print(f'\n{type_str}\n')
   pattern = r'Literal\[(.*?)\]'
 
   if re.search(pattern, type_str):
