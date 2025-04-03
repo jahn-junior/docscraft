@@ -19,6 +19,8 @@ import re
 import textwrap
 import types
 import typing
+import warnings
+import yaml
 
 
 class IncludeFieldDirective(SphinxDirective):
@@ -29,6 +31,7 @@ class IncludeFieldDirective(SphinxDirective):
   option_spec = {
     'hide-examples': bool,
     'hide-type': bool,
+    'name-override': str,
     'name-prepend': str,
     'name-append': str,
   }
@@ -37,23 +40,29 @@ class IncludeFieldDirective(SphinxDirective):
     module_str, class_str = self.arguments[0].rsplit('.', maxsplit=1)
     module = importlib.import_module(module_str)
     pydantic_class = getattr(module, class_str)
-    
+
     # exit if provided field name is not present in the model
     if not self.arguments[1] in pydantic_class.__annotations__:
-      return [] # this should throw an error in final product
+      raise ValueError(f'Could not find field {self.arguments[1]}')
 
-    key_name = self.arguments[1]
+    field_name = self.arguments[1]
 
     # grab pydantic field data
-    field_params = pydantic_class.__fields__[key_name]
-
-    description_str = get_annotation_docstring(pydantic_class, key_name)
-    if description_str is None: # if no docstring
-      description_str = field_params.description # use JSON description value
+    field_params = pydantic_class.__fields__[field_name]
     
+    if field_params.alias:
+      field_alias = field_params.alias
+    else:
+      field_alias = field_name
+
+    description_str = get_annotation_docstring(pydantic_class, field_name)
+    if description_str is None:
+      description_str = field_params.description # use JSON description value
+
     examples = field_params.examples
     enum_values = None
 
+    # if field is optional "normal" type (e.g., str | None)
     if isinstance(field_params.annotation, types.UnionType):
       union_args = typing.get_args(field_params.annotation)
       field_type = format_type_string(str(union_args[0]))
@@ -63,10 +72,11 @@ class IncludeFieldDirective(SphinxDirective):
         enum_values = get_enum_values(union_args[0])
     else:
       field_type = format_type_string(str(field_params.annotation))
-    
+
+    # if field is optional annotated type (e.g., VersionStr | None)
     if typing.get_origin(field_params.annotation) is typing.Union:
       annotated_type = field_params.annotation.__args__[0]
-      # weird case: optional listeral list fields
+      # weird case: optional literal list fields
       if not isinstance(annotated_type, typing._LiteralGenericAlias):
         field_type = format_type_string(str(annotated_type.__args__[0]))
       metadata = getattr(annotated_type, '__metadata__', None)
@@ -81,7 +91,7 @@ class IncludeFieldDirective(SphinxDirective):
           description_str = field_params.annotation.__doc__
         enum_values = get_enum_values(field_params.annotation)
 
-    deprecation_warning = is_deprecated(pydantic_class, key_name)
+    deprecation_warning = is_deprecated(pydantic_class, field_name)
 
     # Remove type if :hide-type: directive option was used
     if 'hide-type' in self.options:
@@ -91,17 +101,19 @@ class IncludeFieldDirective(SphinxDirective):
     if 'hide-examples' in self.options:
       examples = None
 
-    # Get strings to concatenate with `key_name`
+    field_alias = self.options.get('name-override', field_alias)
+
+    # Get strings to concatenate with `field_alias`
     name_prefix = self.options.get('name-prepend', '')
     name_suffix = self.options.get('name-append', '')
 
-    # Concatenate option values in the form <prefix>.key_name.<suffix>
+    # Concatenate option values in the form <prefix>.{field_alias}.<suffix>
     if name_prefix:
-      key_name = f'{name_prefix}.{key_name}'
+      field_alias = f'{name_prefix}.{field_alias}'
     if name_suffix:
-      key_name = f'{key_name}.{name_suffix}'
+      field_alias = f'{field_alias}.{name_suffix}'
 
-    return [create_key_node(key_name, deprecation_warning, field_type, description_str, enum_values, examples)]
+    return [create_key_node(field_alias, deprecation_warning, field_type, description_str, enum_values, examples)]
 
 
 class IncludeModelDirective(SphinxDirective):
@@ -110,7 +122,6 @@ class IncludeModelDirective(SphinxDirective):
   final_argument_whitespace = True
 
   option_spec = {
-    'section-title': str,
     'deprecated': str,
     'name-prepend': str,
     'name-append': str,
@@ -123,10 +134,8 @@ class IncludeModelDirective(SphinxDirective):
 
     if not issubclass(pydantic_class, pydantic.BaseModel):
       return []
-    
-    class_node = nodes.section(ids=[class_str])
-    title_node = nodes.title(text=self.options.get('section-title', ''))
-    class_node += title_node
+
+    class_node = []
 
     # User-provided description overrides model docstring
     if self.content:
@@ -140,21 +149,27 @@ class IncludeModelDirective(SphinxDirective):
 
     for field in pydantic_class.__annotations__:
       is_auto_generated = field.startswith('_') or field.startswith('model_')
-      
+
       if not is_auto_generated:
         deprecation_warning = is_deprecated(pydantic_class, field)
-      
+
       if not is_auto_generated and deprecation_warning is None or field in include_deprecated:
         # grab pydantic field data (need desc and examples)
         field_params = pydantic_class.__fields__[field]
+        
+        if field_params.alias:
+          field_alias = field_params.alias
+        else:
+          field_alias = field
 
         description_str = get_annotation_docstring(pydantic_class, field)
-        if description_str is None: # if no docstring
+        if description_str is None:
           description_str = field_params.description # use JSON description value
-        
+
         examples = field_params.examples
         enum_values = None
 
+        # if field is optional "normal" type (e.g., str | None)
         if isinstance(field_params.annotation, types.UnionType):
           union_args = typing.get_args(field_params.annotation)
           field_type = format_type_string(str(union_args[0]))
@@ -164,8 +179,8 @@ class IncludeModelDirective(SphinxDirective):
             enum_values = get_enum_values(union_args[0])
         else:
           field_type = format_type_string(str(field_params.annotation))
-        
-        # if field is of the form `field: type1 | type2 = pydantic.Field(...)`
+
+        # if field is optional annotated type (e.g., `VersionStr | None`)
         if typing.get_origin(field_params.annotation) is typing.Union:
           annotated_type = field_params.annotation.__args__[0]
           # weird case: optional listeral list fields
@@ -183,19 +198,19 @@ class IncludeModelDirective(SphinxDirective):
               description_str = field_params.annotation.__doc__
             enum_values = get_enum_values(field_params.annotation)
 
-        # Get strings to concatenate with `key_name`
+        # Get strings to concatenate with `field_alias`
         name_prefix = self.options.get('name-prepend', '')
         name_suffix = self.options.get('name-append', '')
 
-        # Concatenate option values in the form <prefix>.key_name.<suffix>
+        # Concatenate option values in the form <prefix>.{field_alias}.<suffix>
         if name_prefix:
-          field = f'{name_prefix}.{field}'
+          field_alias = f'{name_prefix}.{field_alias}'
         if name_suffix:
-          field = f'{key_name}.{field}'
+          field_alias = f'{field_alias}.{field_alias}'
 
-        class_node += create_key_node(field, deprecation_warning, field_type, description_str, enum_values, examples)
+        class_node.append(create_key_node(field_alias, deprecation_warning, field_type, description_str, enum_values, examples))
 
-    return [class_node]
+    return class_node
 
 
 def find_field_data(metadata):
@@ -225,7 +240,7 @@ def create_key_node(key_name, deprecated_message, key_type, key_desc, key_values
   title_node = nodes.title()
   title_node += nodes.literal(text=key_name)
   key_node += title_node
-  
+
   if deprecated_message:
     deprecated_node = nodes.admonition()
     deprecated_node['classes'] = ['important']
@@ -246,7 +261,7 @@ def create_key_node(key_name, deprecated_message, key_type, key_desc, key_values
     desc_header += nodes.strong(text='Description')
     key_node += desc_header
     key_node += parse_rst_description(key_desc)
-  
+
   if key_values:
     values_header = nodes.paragraph()
     values_header += nodes.strong(text='Values')
@@ -265,11 +280,19 @@ def create_key_node(key_name, deprecated_message, key_type, key_desc, key_values
 
 def build_examples_block(key_name, example):
   examples_block = nodes.literal_block()
-  example_str = json.dumps(example, indent=2)
-  examples_block += nodes.Text(f'{key_name.rsplit('.', maxsplit=1)[-1]}: ')
-  yaml_string = example_str.replace('"', '').replace('{', '').replace('}', '').rstrip()
-  examples_block += nodes.Text(yaml_string)
-
+  examples_block['classes'] = ['yaml']
+  
+  try:
+    yaml_str = yaml.dump(yaml.safe_load(example), default_flow_style=False)
+    yaml_str = yaml_str.replace('- ', '  - ')
+    # yaml_str = textwrap.indent(yaml_string, "  ")
+  except yaml.YAMLError as e:
+    warnings.warn(f'Invalid YAML for key {key_name}: {e}', category=UserWarning)
+    yaml_str = example
+  
+  # examples_block += nodes.Text(f'{key_name.rsplit(".", maxsplit=1)[-1]}: \n')
+  examples_block += nodes.Text(yaml_str)
+  
   return examples_block
 
 
@@ -303,7 +326,7 @@ def create_table_node(values):
 
   for row in values:
     tbody += create_table_row(row)
-  
+
   return div_node
 
 
@@ -325,19 +348,19 @@ def create_table_row(values):
 def get_annotation_docstring(cls, annotation_name: str) -> str:
   code = inspect.getsource(cls)
   tree = ast.parse(code)
-  
+
   found = False
   docstring = None
 
   for node in ast.walk(tree):
-    if isinstance(node, ast.AnnAssign):
-      if found:
-        return None
-      if node.target.id == annotation_name:
-        found = True
-    elif found and isinstance(node, ast.Expr):
-      docstring = node.value.value
+    if found:
+      if isinstance(node, ast.Expr):
+        docstring = node.value.value
       break
+    else:
+      if isinstance(node, ast.AnnAssign):
+        if node.target.id == annotation_name:
+          found = True
 
   return docstring
 
@@ -355,13 +378,13 @@ def get_enum_member_docstring(cls, enum_member):
             docstring_node = node.body[i + 1]
             if isinstance(node.body[i + 1], ast.Expr):
               return docstring_node.value.value
-  
+
   return None
 
 
 def get_enum_values(enum_class: str) -> list[str]:
   enum_docstrings = []
-  
+
   for attr, enum in enum_class.__dict__.items():
     if not attr.startswith('_'):
       docstring = get_enum_member_docstring(enum_class, attr)
@@ -387,7 +410,7 @@ def strip_whitespace(rst_desc):
     remaining_lines = lines[1:]
     dedented_remaining_lines = textwrap.dedent('\n'.join(remaining_lines)).splitlines()
     return '\n'.join([first_line] + dedented_remaining_lines)
-  
+
   return ''
 
 
