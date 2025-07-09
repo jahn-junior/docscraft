@@ -5,7 +5,9 @@ description = "A braindump of pydantic models for us to document"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "docutils>=0.21.2",
     "pydantic>=2.10.6",
     "sphinx",
     "sphinx-autobuild>=2024.10.3",
+    "types-docutils>=0.21.0.20250708",
 ]

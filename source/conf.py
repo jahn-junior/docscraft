@@ -3,6 +3,9 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import sys
+from pathlib import Path
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -14,13 +17,14 @@ release = 'no'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
+sys.path.append(str(Path('_ext').resolve()))
+
 extensions = [
     "sphinx.ext.autodoc",
+    "literalref",
 ]
 
 templates_path = ['_templates']
-exclude_patterns = []
-
 
 
 # -- Options for HTML output -------------------------------------------------
